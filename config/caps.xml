@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<caps>
+    <server title="Audyn" version="0.1.0" url="https://github.com/Samxel/audyn"/>
+    <limits max="100" default="25"/>
+    <registration available="no" open="no"/>
+
+    <searching>
+        <search available="yes" supportedParams="q"/>
+        <music-search available="yes" supportedParams="q,artist,album,track"/>
+        <audio-search available="yes" supportedParams="q"/>
+        <tv-search    available="no" supportedParams=""/>
+        <movie-search available="no" supportedParams=""/>
+        <book-search  available="no" supportedParams=""/>
+    </searching>
+
+    <categories>
+        <category id="3000" name="Audio">
+            <subcat id="3010" name="MP3"/>
+            <subcat id="3020" name="AAC"/>
+            <subcat id="3030" name="Ogg"/>
+            <subcat id="3040" name="Lossless"/>
+            <subcat id="3050" name="Other"/>
+        </category>
+    </categories>
+</caps>
