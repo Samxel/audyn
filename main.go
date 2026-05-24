@@ -1,6 +1,7 @@
 package main
 
 import (
+	"audyn/config"
 	"audyn/handler"
 	"log/slog"
 	"net/http"
@@ -13,10 +14,13 @@ func main() {
 	}))
 	slog.SetDefault(logger)
 
-	slog.Info("Audyn started", "port", 5000)
-	http.HandleFunc("/", handler.ServeNewznab)
+	cfg := config.Load()
 
-	if err := http.ListenAndServe(":5000", nil); err != nil {
+	slog.Info("Audyn started", "port", cfg.Port)
+	newznab := &handler.NewznabHandler{Config: cfg}
+	http.HandleFunc("/", newznab.Serve)
+
+	if err := http.ListenAndServe(":"+cfg.Port, nil); err != nil {
 		slog.Error("Audyn stopped", "err", err)
 	}
 }

@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"audyn/config"
 	"encoding/xml"
 	"fmt"
 	"log/slog"
@@ -10,18 +11,17 @@ import (
 	"time"
 )
 
+type SearchHandler struct {
+	Config config.Config
+}
+
 func xmlEscape(s string) string {
 	var buf strings.Builder
 	xml.EscapeText(&buf, []byte(s))
 	return buf.String()
 }
 
-type DeezerAlbumDetail struct {
-	ReleaseDate string `json:"release_date"`
-	NbTracks    int    `json:"nb_tracks"`
-}
-
-func ServeSearch(w http.ResponseWriter, r *http.Request) {
+func (h *SearchHandler) Serve(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query().Get("q")
 	artist := r.URL.Query().Get("artist")
 	album := r.URL.Query().Get("album")
@@ -78,8 +78,9 @@ func ServeSearch(w http.ResponseWriter, r *http.Request) {
 
 		title := fmt.Sprintf("%s - %s (%s) [%s]", xmlEscape(a.Artist.Name), xmlEscape(a.Title), year, quality)
 		guid := fmt.Sprintf("audyn-deezer-%d", a.ID)
-		downloadURL := fmt.Sprintf("http://192.168.0.204:5000/download/%d", a.ID)
+		downloadURL := fmt.Sprintf("http://%s/download/%d", r.Host, a.ID)
 		estimatedSize := int64(a.NbTracks) * 210 * 128000 / 8 // TODO: change 128000 depending on quality
+
 		items += fmt.Sprintf(`
 		<item>
 			<title>%s</title>

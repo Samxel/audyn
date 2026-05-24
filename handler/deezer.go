@@ -20,6 +20,11 @@ type DeezerAlbum struct {
 	NbTracks    int    `json:"nb_tracks"`
 }
 
+type DeezerAlbumDetail struct {
+	ReleaseDate string `json:"release_date"`
+	NbTracks    int    `json:"nb_tracks"`
+}
+
 type DeezerResponse struct {
 	Data []DeezerAlbum `json:"data"`
 }
