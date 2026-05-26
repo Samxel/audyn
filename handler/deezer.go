@@ -36,6 +36,43 @@ type DeezerResponse struct {
 	Data []DeezerAlbum `json:"data"`
 }
 
+type DeezerContributor struct {
+	Name string `json:"name"`
+	Role string `json:"role"`
+}
+
+type DeezerTrack struct {
+	ID            int    `json:"id"`
+	Title         string `json:"title"`
+	TrackPosition int    `json:"track_position"`
+	DiskNumber    int    `json:"disk_number"`
+	Artist        struct {
+		Name string `json:"name"`
+	} `json:"artist"`
+	Contributors []DeezerContributor `json:"contributors"`
+}
+
+type DeezerTracksResponse struct {
+	Data []DeezerTrack `json:"data"`
+}
+
+var GetAlbumTracksFunc = GetAlbumTracks
+
+func GetAlbumTracks(id int) ([]DeezerTrack, error) {
+	apiURL := fmt.Sprintf("https://api.deezer.com/album/%d/tracks", id)
+	resp, err := deezerClient.Get(apiURL)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var result DeezerTracksResponse
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, err
+	}
+	return result.Data, nil
+}
+
 func SearchDeezer(q string) ([]DeezerAlbum, error) {
 	apiURL := fmt.Sprintf("https://api.deezer.com/search/album?q=%s&limit=25", url.QueryEscape(q))
 

@@ -7,11 +7,13 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"log/slog"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -42,19 +44,15 @@ type DownloadJob struct {
 	CompletedAt    time.Time
 }
 
-// JobQueue is a thread-safe store for all download jobs.
 type JobQueue struct {
 	mu   sync.RWMutex
 	jobs map[string]*DownloadJob
 }
 
-// Queue is the singleton job store used by both the SABnzbd handler and the
-// download goroutines.
 var Queue = &JobQueue{
 	jobs: make(map[string]*DownloadJob),
 }
 
-// Reset clears every job from the queue. Only intended for use in tests.
 func (q *JobQueue) Reset() {
 	q.mu.Lock()
 	q.jobs = make(map[string]*DownloadJob)
@@ -66,6 +64,99 @@ var RunDownloadFunc = RunDownload
 var audioExts = map[string]bool{
 	".flac": true, ".mp3": true, ".opus": true,
 	".ogg": true, ".m4a": true, ".wav": true,
+}
+
+var trackDiscRe = regexp.MustCompile(`^(?:(\d+)-)?(\d+)`)
+var TagTrackArtistFunc = tagTrackWithMutagen
+
+func tagTrackWithMutagen(filePath, artist string) error {
+	const script = `import sys; from mutagen import File; f=File(sys.argv[1],easy=True); f["artist"]=[sys.argv[2]]; f.save()`
+	cmd := exec.Command("python", "-c", script, filePath, artist)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("mutagen: %w: %s", err, strings.TrimSpace(string(out)))
+	}
+	return nil
+}
+
+func featuredArtistNames(t DeezerTrack) []string {
+	var names []string
+	for _, c := range t.Contributors {
+		if strings.EqualFold(c.Role, "Featured") {
+			names = append(names, c.Name)
+		}
+	}
+	return names
+}
+
+func extractDiscTrack(filename string) (disc, track int) {
+	base := filename
+	if i := strings.LastIndex(filename, "."); i > 0 {
+		base = filename[:i]
+	}
+	m := trackDiscRe.FindStringSubmatch(strings.TrimSpace(base))
+	if len(m) < 3 {
+		return 0, 0
+	}
+	if m[1] != "" {
+		disc, _ = strconv.Atoi(m[1])
+	} else {
+		disc = 1
+	}
+	track, _ = strconv.Atoi(m[2])
+	return disc, track
+}
+
+type trackKey struct{ disc, track int }
+
+func applyFeaturedArtistTags(albumID, localPath string) {
+	numID, err := strconv.Atoi(albumID)
+	if err != nil {
+		return
+	}
+	tracks, err := GetAlbumTracksFunc(numID)
+	if err != nil {
+		slog.Warn("applyFeaturedArtistTags: could not fetch tracks", "album_id", albumID, "err", err)
+		return
+	}
+
+	byKey := make(map[trackKey]string)
+	for _, t := range tracks {
+		featured := featuredArtistNames(t)
+		if len(featured) == 0 {
+			continue
+		}
+		disc := t.DiskNumber
+		if disc == 0 {
+			disc = 1
+		}
+		byKey[trackKey{disc, t.TrackPosition}] = t.Artist.Name + " feat. " + strings.Join(featured, ", ")
+	}
+	if len(byKey) == 0 {
+		return // no featured artists on this album
+	}
+
+	_ = filepath.WalkDir(localPath, func(p string, d os.DirEntry, walkErr error) error {
+		if walkErr != nil || d.IsDir() {
+			return nil
+		}
+		if !audioExts[strings.ToLower(filepath.Ext(d.Name()))] {
+			return nil
+		}
+		disc, track := extractDiscTrack(d.Name())
+		if track == 0 {
+			return nil
+		}
+		artist, ok := byKey[trackKey{disc, track}]
+		if !ok {
+			return nil
+		}
+		if tagErr := TagTrackArtistFunc(p, artist); tagErr != nil {
+			slog.Warn("applyFeaturedArtistTags: tag failed", "file", p, "err", tagErr)
+		} else {
+			slog.Info("applyFeaturedArtistTags: set features", "file", p, "artist", artist)
+		}
+		return nil
+	})
 }
 
 // newJobID returns a random 16-character hex string suitable as a job/nzo id.
@@ -325,6 +416,12 @@ func finalizeDownload(job *DownloadJob, cfg config.Config, folderName string, cm
 			mappedPath = path.Join(cfg.CompletePathMapping, folderName, first)
 		}
 	}
+
+	// Enrich ARTIST tags with featured-artist info from Deezer contributors.
+	// The mutex is not held during this call so the walk doesn't block readers.
+	Queue.mu.Unlock()
+	applyFeaturedArtistTags(job.AlbumID, localPath)
+	Queue.mu.Lock()
 
 	job.FilePath = mappedPath
 	job.Status = StatusComplete
