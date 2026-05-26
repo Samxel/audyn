@@ -211,7 +211,10 @@ func (h *SabnzbdHandler) handleAddFile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	job := Queue.Add(albumID, title, folderName, estimatedBytes)
-	go RunDownloadFunc(job, h.Config)
+	go func() {
+		WaitForDownloadWindow(h.Config)
+		RunDownloadFunc(job, h.Config)
+	}()
 
 	slog.Info("addfile: job created", "job_id", job.ID, "album_id", albumID, "title", title, "folder", folderName)
 

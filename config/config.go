@@ -12,6 +12,8 @@ type Config struct {
 	CompletePath        string
 	CompletePathMapping string
 	Port                string
+	ScheduleStart       string
+	ScheduleEnd         string
 }
 
 func Load() Config {
@@ -22,6 +24,8 @@ func Load() Config {
 		CompletePath:        getEnv("AUDYN_COMPLETE_PATH", "/downloads/complete"),
 		CompletePathMapping: getEnv("AUDYN_COMPLETE_PATH_MAPPING", "/downloads/complete"),
 		Port:                getEnv("AUDYN_PORT", "5000"),
+		ScheduleStart:       getEnv("AUDYN_SCHEDULE_START", ""),
+		ScheduleEnd:         getEnv("AUDYN_SCHEDULE_END", ""),
 	}
 }
 
