@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -178,14 +179,29 @@ func (h *SabnzbdHandler) handleAddFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if name == "" {
-		name = "deezer-" + albumID
+	// Build a human-readable title and folder name from the Deezer API.
+	// Fall back to generic names if the lookup fails (no ARL needed for metadata).
+	title := name
+	folderName := "deezer-" + albumID
+	if numID, err := strconv.Atoi(albumID); err == nil {
+		if detail, err := GetAlbumDetail(numID); err == nil && detail.Title != "" {
+			year := ""
+			if len(detail.ReleaseDate) >= 4 {
+				year = " (" + detail.ReleaseDate[:4] + ")"
+			}
+			rawTitle := detail.Artist.Name + " - " + detail.Title + year
+			title = rawTitle
+			folderName = sanitizeForFS(rawTitle)
+		}
+	}
+	if title == "" || strings.HasPrefix(title, "deezer-") || strings.HasPrefix(title, "audyn-deezer-") {
+		title = folderName
 	}
 
-	job := Queue.Add(albumID, name)
+	job := Queue.Add(albumID, title, folderName)
 	go RunDownloadFunc(job, h.Config)
 
-	slog.Info("addfile: job created", "job_id", job.ID, "album_id", albumID, "name", name)
+	slog.Info("addfile: job created", "job_id", job.ID, "album_id", albumID, "title", title, "folder", folderName)
 
 	json.NewEncoder(w).Encode(map[string]any{
 		"status":  true,

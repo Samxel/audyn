@@ -8,8 +8,10 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"strings"
 	"sync"
 	"time"
+	"unicode"
 )
 
 // JobStatus represents the lifecycle state of a download job.
@@ -22,13 +24,12 @@ const (
 	StatusFailed      JobStatus = "failed"
 )
 
-// DownloadJob tracks a single Deezer album download driven by streamrip.
 type DownloadJob struct {
-	ID      string
-	AlbumID string
-	Title   string
-	Status  JobStatus
-	// FilePath is the directory Lidarr should import from (mapped path).
+	ID          string
+	AlbumID     string
+	Title       string
+	FolderName  string
+	Status      JobStatus
 	FilePath    string
 	Error       string
 	CreatedAt   time.Time
@@ -63,19 +64,40 @@ func newJobID() string {
 	return hex.EncodeToString(b)
 }
 
-// Add creates a new job for the given Deezer album ID, stores it and returns it.
-func (q *JobQueue) Add(albumID, title string) *DownloadJob {
+func (q *JobQueue) Add(albumID, title, folderName string) *DownloadJob {
 	job := &DownloadJob{
-		ID:        newJobID(),
-		AlbumID:   albumID,
-		Title:     title,
-		Status:    StatusQueued,
-		CreatedAt: time.Now(),
+		ID:         newJobID(),
+		AlbumID:    albumID,
+		Title:      title,
+		FolderName: folderName,
+		Status:     StatusQueued,
+		CreatedAt:  time.Now(),
 	}
 	q.mu.Lock()
 	q.jobs[job.ID] = job
 	q.mu.Unlock()
 	return job
+}
+
+func sanitizeForFS(s string) string {
+	var b strings.Builder
+	for _, r := range s {
+		switch {
+		case r == '/' || r == '\\' || r == ':' || r == '*' ||
+			r == '?' || r == '"' || r == '<' || r == '>' || r == '|':
+			b.WriteRune('-')
+		case unicode.IsControl(r):
+			// skip control characters
+		default:
+			b.WriteRune(r)
+		}
+	}
+	result := strings.TrimSpace(b.String())
+	runes := []rune(result)
+	if len(runes) > 120 {
+		runes = runes[:120]
+	}
+	return strings.TrimSpace(string(runes))
 }
 
 // Get returns the job with the given ID.
@@ -112,10 +134,6 @@ func (q *JobQueue) Completed() []*DownloadJob {
 	return out
 }
 
-// RunDownload invokes streamrip to download a Deezer album and updates the job
-// status accordingly.  It is intended to be called in a goroutine:
-//
-//	go RunDownload(job, cfg)
 func RunDownload(job *DownloadJob, cfg config.Config) {
 	Queue.mu.Lock()
 	job.Status = StatusDownloading
@@ -123,9 +141,11 @@ func RunDownload(job *DownloadJob, cfg config.Config) {
 
 	slog.Info("Download started", "job_id", job.ID, "album_id", job.AlbumID)
 
-	// Each job gets its own sub-directory so the storage path reported back to
-	// Lidarr is unambiguous even when multiple downloads run concurrently.
-	jobFolder := path.Join(cfg.CompletePath, job.ID)
+	folderName := job.FolderName
+	if folderName == "" {
+		folderName = job.ID
+	}
+	jobFolder := path.Join(cfg.CompletePath, folderName)
 
 	if err := os.MkdirAll(jobFolder, 0o755); err != nil {
 		slog.Error("Failed to create job folder", "job_id", job.ID, "err", err)
@@ -160,8 +180,8 @@ func RunDownload(job *DownloadJob, cfg config.Config) {
 		return
 	}
 
-	mappedPath := path.Join(cfg.CompletePathMapping, job.ID)
-	localPath := path.Join(cfg.CompletePath, job.ID)
+	mappedPath := path.Join(cfg.CompletePathMapping, folderName)
+	localPath := path.Join(cfg.CompletePath, folderName)
 
 	entries, err := os.ReadDir(localPath)
 	if err == nil && len(entries) > 0 {
