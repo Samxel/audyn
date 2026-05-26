@@ -73,23 +73,24 @@ func (h *SearchHandler) Serve(w http.ResponseWriter, r *http.Request) {
 			year = a.ReleaseDate[:4]
 		}
 
-		// TODO: adjust depending on user profile & adjust when estimating size
-		quality := "MP3 128kbps"
+		const quality = "FLAC"
 
 		title := fmt.Sprintf("%s - %s (%s) [%s]", xmlEscape(a.Artist.Name), xmlEscape(a.Title), year, quality)
 		guid := fmt.Sprintf("audyn-deezer-%d", a.ID)
 		downloadURL := fmt.Sprintf("http://%s/download/%d", r.Host, a.ID)
-		estimatedSize := int64(a.NbTracks) * 210 * 128000 / 8 // TODO: change 128000 depending on quality
+
+		estimatedSize := int64(a.NbTracks) * 25 * 1024 * 1024
 
 		items += fmt.Sprintf(`
 		<item>
 			<title>%s</title>
 			<guid>%s</guid>
 			<pubDate>%s</pubDate>
-			<enclosure url="%s" length="150000000" type="application/x-nzb"/>
-			<newznab:attr name="category" value="3010"/>
+			<enclosure url="%s" length="%d" type="application/x-nzb"/>
+			<newznab:attr name="category" value="3040"/>
 			<newznab:attr name="size" value="%d"/>
-		</item>`, title, guid, time.Now().Format(time.RFC1123Z), downloadURL, estimatedSize)
+			<newznab:attr name="audioformat" value="FLAC"/>
+		</item>`, title, guid, time.Now().Format(time.RFC1123Z), downloadURL, estimatedSize, estimatedSize)
 	}
 
 	fmt.Fprintf(w, `<?xml version="1.0" encoding="UTF-8"?>
