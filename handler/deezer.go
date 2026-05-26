@@ -5,7 +5,10 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"time"
 )
+
+var deezerClient = &http.Client{Timeout: 15 * time.Second}
 
 type DeezerAlbum struct {
 	ID     int    `json:"id"`
@@ -33,11 +36,10 @@ type DeezerResponse struct {
 	Data []DeezerAlbum `json:"data"`
 }
 
-// TODO: maybe add feature artists depending on Lidarr file name requirements
 func SearchDeezer(q string) ([]DeezerAlbum, error) {
 	apiURL := fmt.Sprintf("https://api.deezer.com/search/album?q=%s&limit=25", url.QueryEscape(q))
 
-	resp, err := http.Get(apiURL)
+	resp, err := deezerClient.Get(apiURL)
 	if err != nil {
 		return nil, err
 	}
@@ -54,7 +56,7 @@ func SearchDeezer(q string) ([]DeezerAlbum, error) {
 func GetAlbumDetail(id int) (DeezerAlbumDetail, error) {
 	apiURL := fmt.Sprintf("https://api.deezer.com/album/%d", id)
 
-	resp, err := http.Get(apiURL)
+	resp, err := deezerClient.Get(apiURL)
 	if err != nil {
 		return DeezerAlbumDetail{}, err
 	}
