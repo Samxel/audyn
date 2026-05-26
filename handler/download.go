@@ -211,6 +211,7 @@ func RunDownload(job *DownloadJob, cfg config.Config) {
 	createdDirs := map[string]bool{}
 	pathPrefix := cfg.CompletePath + "/"
 	scanner := bufio.NewScanner(pr)
+	scanner.Buffer(make([]byte, 1<<20), 1<<20)
 
 	for scanner.Scan() {
 		line := scanner.Text()
