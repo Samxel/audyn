@@ -244,24 +244,3 @@ func (h *SabnzbdHandler) handleDeleteJob(w http.ResponseWriter, r *http.Request)
 	json.NewEncoder(w).Encode(map[string]any{"status": true})
 }
 
-// extractAlbumID pulls the Deezer album ID out of a download URL.
-// Expected format: http://host/download/{numeric-id}
-func extractAlbumID(downloadURL string) string {
-	// Strip trailing slash then take the last path segment
-	trimmed := strings.TrimRight(downloadURL, "/")
-	idx := strings.LastIndex(trimmed, "/")
-	if idx < 0 {
-		return ""
-	}
-	last := trimmed[idx+1:]
-	// Must be all digits to be a valid Deezer ID
-	if last == "" {
-		return ""
-	}
-	for _, c := range last {
-		if c < '0' || c > '9' {
-			return ""
-		}
-	}
-	return last
-}
