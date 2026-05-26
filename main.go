@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"time"
 )
 
 func main() {
@@ -29,7 +30,11 @@ func main() {
 	http.HandleFunc("/download/", handler.ServeNZB)
 	http.HandleFunc("/", newznab.Serve)
 
-	if err := http.ListenAndServe(":"+cfg.Port, nil); err != nil {
+	srv := &http.Server{
+		Addr:              ":" + cfg.Port,
+		ReadHeaderTimeout: 10 * time.Second,
+	}
+	if err := srv.ListenAndServe(); err != nil {
 		slog.Error("Audyn stopped", "err", err)
 	}
 }
