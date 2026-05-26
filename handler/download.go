@@ -311,16 +311,16 @@ func finalizeDownload(job *DownloadJob, cfg config.Config, folderName string, cm
 	if entries, err := os.ReadDir(localPath); err == nil && len(entries) > 0 {
 		first := entries[0].Name()
 		artistDir := path.Join(localPath, first)
-		if albumEntries, err := os.ReadDir(artistDir); err == nil && len(albumEntries) > 0 {
+		if albumEntries, err := os.ReadDir(artistDir); err == nil {
 			for _, e := range albumEntries {
 				if e.IsDir() {
 					mappedPath = path.Join(cfg.CompletePathMapping, folderName, first, e.Name())
 					break
 				}
 			}
-			if mappedPath == path.Join(cfg.CompletePathMapping, folderName) {
-				mappedPath = path.Join(cfg.CompletePathMapping, folderName, first)
-			}
+		}
+		if mappedPath == path.Join(cfg.CompletePathMapping, folderName) {
+			mappedPath = path.Join(cfg.CompletePathMapping, folderName, first)
 		}
 	}
 
