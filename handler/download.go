@@ -168,7 +168,15 @@ func RunDownload(job *DownloadJob, cfg config.Config) {
 		artistDir := path.Join(localPath, entries[0].Name())
 		albumEntries, err := os.ReadDir(artistDir)
 		if err == nil && len(albumEntries) > 0 {
-			mappedPath = path.Join(cfg.CompletePathMapping, job.ID, entries[0].Name(), albumEntries[0].Name())
+			for _, e := range albumEntries {
+				if e.IsDir() {
+					mappedPath = path.Join(cfg.CompletePathMapping, job.ID, entries[0].Name(), e.Name())
+					break
+				}
+			}
+			if mappedPath == path.Join(cfg.CompletePathMapping, job.ID) {
+				mappedPath = path.Join(cfg.CompletePathMapping, job.ID, entries[0].Name())
+			}
 		}
 	}
 
