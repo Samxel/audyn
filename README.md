@@ -13,3 +13,14 @@ It speaks Newznab to Prowlarr and SABnzbd to Lidarr, while actually searching an
 - Prowlarr → Audyn (Newznab)
 - Lidarr → Audyn (SABnzbd)
 - Audyn → Deezer API
+
+## Credits
+
+Downloads powered by [streamrip](https://github.com/nathom/streamrip) by nathom (stripped down to Deezer-only for this project)
+
+## Disclaimer
+
+This project is provided for educational purposes only.
+By using Audyn, you agree to the terms and conditions of the Deezer API. The author is not responsible for any misuse of this software or any violations of Deezer's terms of service. Use at your own risk.
+
+This project was developed with the assistance of AI tools (Claude by Anthropic).
