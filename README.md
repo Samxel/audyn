@@ -13,3 +13,7 @@ It speaks Newznab to Prowlarr and SABnzbd to Lidarr, while actually searching an
 - Prowlarr → Audyn (Newznab)
 - Lidarr → Audyn (SABnzbd)
 - Audyn → Deezer API
+
+## Credits
+
+Downloads powered by [streamrip](https://github.com/nathom/streamrip) by nathom (stripped down to Deezer-only for this project)
