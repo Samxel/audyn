@@ -1,12 +1,8 @@
-# ── Secrets & lokale Configs ──────────────────────────────────────────────
-# streamrip config enthält den Deezer ARL-Cookie – niemals committen
 .config/
 
-# ── Go ────────────────────────────────────────────────────────────────────
 *.exe
 __debug_bin*
 
-# ── Python ───────────────────────────────────────────────────────────────
 __pycache__/
 *.py[cod]
 *.pyo
@@ -18,10 +14,6 @@ build/
 .venv/
 venv/
 
-# ── Docker ───────────────────────────────────────────────────────────────
-# (keine generierten Artefakte hier)
-
-# ── Editor ───────────────────────────────────────────────────────────────
 .vscode/
 .idea/
 *.swp
