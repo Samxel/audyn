@@ -13,6 +13,8 @@ import (
 	"strings"
 )
 
+var nzbIDRe = regexp.MustCompile(`audyn-deezer-(\d+)@audyn`)
+
 type SabnzbdHandler struct {
 	Config config.Config
 }
@@ -176,9 +178,7 @@ func (h *SabnzbdHandler) handleAddFile(w http.ResponseWriter, r *http.Request) {
 		var buf strings.Builder
 		io.Copy(&buf, file)
 
-		// extract id
-		re := regexp.MustCompile(`audyn-deezer-(\d+)@audyn`)
-		if matches := re.FindStringSubmatch(buf.String()); len(matches) > 1 {
+		if matches := nzbIDRe.FindStringSubmatch(buf.String()); len(matches) > 1 {
 			albumID = matches[1]
 		}
 	}
