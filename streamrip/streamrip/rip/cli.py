@@ -10,7 +10,7 @@ from typing import Any
 import aiofiles
 import aiohttp
 import click
-from click_help_colors import HelpColorsGroup  # type: ignore
+from click_help_colors import HelpColorsGroup
 from rich.logging import RichHandler
 from rich.markdown import Markdown
 from rich.prompt import Confirm

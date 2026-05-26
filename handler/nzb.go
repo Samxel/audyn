@@ -7,7 +7,7 @@ import (
 )
 
 func ServeNZB(w http.ResponseWriter, r *http.Request) {
-	// Extrahiere Album-ID aus /download/123456
+	// extract album id
 	id := strings.TrimPrefix(r.URL.Path, "/download/")
 
 	w.Header().Set("Content-Type", "application/x-nzb")

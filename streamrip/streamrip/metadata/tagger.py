@@ -6,7 +6,7 @@ import aiofiles
 from mutagen import id3
 from mutagen.flac import FLAC, Picture
 from mutagen.id3 import (
-    APIC,  # type: ignore
+    APIC,
     ID3,
     ID3NoHeaderError,
 )
@@ -43,23 +43,23 @@ MP4_KEYS = (
 )
 
 MP3_KEYS = (
-    id3.TIT2,  # type: ignore
-    id3.TPE1,  # type: ignore
-    id3.TALB,  # type: ignore
-    id3.TPE2,  # type: ignore
-    id3.TCOM,  # type: ignore
-    id3.TYER,  # type: ignore
-    id3.COMM,  # type: ignore
-    id3.TT1,  # type: ignore
-    id3.TT1,  # type: ignore
-    id3.GP1,  # type: ignore
-    id3.TCON,  # type: ignore
-    id3.USLT,  # type: ignore
-    id3.TEN,  # type: ignore
-    id3.TCOP,  # type: ignore
-    id3.TCMP,  # type: ignore
-    id3.TRCK,  # type: ignore
-    id3.TPOS,  # type: ignore
+    id3.TIT2,
+    id3.TPE1,
+    id3.TALB,
+    id3.TPE2,
+    id3.TCOM,
+    id3.TYER,
+    id3.COMM,
+    id3.TT1,
+    id3.TT1,
+    id3.GP1,
+    id3.TCON,
+    id3.USLT,
+    id3.TEN,
+    id3.TCOP,
+    id3.TCMP,
+    id3.TRCK,
+    id3.TPOS,
     None,
     None,
     None,

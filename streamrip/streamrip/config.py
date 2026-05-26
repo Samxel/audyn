@@ -147,21 +147,21 @@ class ConfigData:
     @classmethod
     def from_toml(cls, toml_str: str):
         toml = parse(toml_str)
-        if (v := toml["misc"]["version"]) != CURRENT_CONFIG_VERSION:  # type: ignore
+        if (v := toml["misc"]["version"]) != CURRENT_CONFIG_VERSION:
             raise OutdatedConfigError(
                 f"Need to update config from {v} to {CURRENT_CONFIG_VERSION}",
             )
 
-        downloads = DownloadsConfig(**toml["downloads"])  # type: ignore
-        deezer = DeezerConfig(**toml["deezer"])  # type: ignore
-        lastfm = LastFmConfig(**toml["lastfm"])  # type: ignore
-        artwork = ArtworkConfig(**toml["artwork"])  # type: ignore
-        filepaths = FilepathsConfig(**toml["filepaths"])  # type: ignore
-        metadata = MetadataConfig(**toml["metadata"])  # type: ignore
-        cli = CliConfig(**toml["cli"])  # type: ignore
-        database = DatabaseConfig(**toml["database"])  # type: ignore
-        conversion = ConversionConfig(**toml["conversion"])  # type: ignore
-        misc = MiscConfig(**toml["misc"])  # type: ignore
+        downloads = DownloadsConfig(**toml["downloads"])
+        deezer = DeezerConfig(**toml["deezer"])
+        lastfm = LastFmConfig(**toml["lastfm"])
+        artwork = ArtworkConfig(**toml["artwork"])
+        filepaths = FilepathsConfig(**toml["filepaths"])
+        metadata = MetadataConfig(**toml["metadata"])
+        cli = CliConfig(**toml["cli"])
+        database = DatabaseConfig(**toml["database"])
+        conversion = ConversionConfig(**toml["conversion"])
+        misc = MiscConfig(**toml["misc"])
 
         return cls(
             toml=toml,
@@ -273,9 +273,9 @@ def set_user_defaults(path: str, /):
 
 
 def toml_set_user_defaults(toml: TOMLDocument):
-    toml["downloads"]["folder"] = DEFAULT_DOWNLOADS_FOLDER  # type: ignore
-    toml["database"]["downloads_path"] = DEFAULT_DOWNLOADS_DB_PATH  # type: ignore
-    toml["database"]["failed_downloads_path"] = DEFAULT_FAILED_DOWNLOADS_DB_PATH  # type: ignore
+    toml["downloads"]["folder"] = DEFAULT_DOWNLOADS_FOLDER
+    toml["database"]["downloads_path"] = DEFAULT_DOWNLOADS_DB_PATH
+    toml["database"]["failed_downloads_path"] = DEFAULT_FAILED_DOWNLOADS_DB_PATH
 
 
 def _get_dict_keys_r(d: dict) -> set[tuple]:

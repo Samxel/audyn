@@ -152,7 +152,6 @@ func RunDownload(job *DownloadJob, cfg config.Config) {
 		return
 	}
 
-	// Finde den tatsächlichen Album-Unterordner (Artist/Album)
 	mappedPath := path.Join(cfg.CompletePathMapping, job.ID)
 	localPath := path.Join(cfg.CompletePath, job.ID)
 

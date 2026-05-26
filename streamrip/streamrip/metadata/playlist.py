@@ -23,8 +23,8 @@ class PlaylistMetadata:
         if len(self.tracks) == 0:
             return []
         if isinstance(self.tracks[0], str):
-            return self.tracks  # type: ignore
-        return [track.info.id for track in self.tracks]  # type: ignore
+            return self.tracks
+        return [track.info.id for track in self.tracks]
 
     @classmethod
     def from_resp(cls, resp: dict, source: str):

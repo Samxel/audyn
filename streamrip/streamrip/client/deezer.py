@@ -130,7 +130,7 @@ class DeezerClient(Client):
             except AttributeError:
                 raise Exception(f"Invalid media type {media_type}")
 
-        response = search_function(query, limit=limit)  # type: ignore
+        response = search_function(query, limit=limit)
         if response["total"] > 0:
             return [response]
         return []

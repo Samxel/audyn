@@ -160,14 +160,13 @@ func (h *SabnzbdHandler) handleAddFile(w http.ResponseWriter, r *http.Request) {
 
 	albumID := ""
 
-	// NZB kommt als Datei im "nzbfile" Feld
 	file, _, err := r.FormFile("name")
 	if err == nil {
 		defer file.Close()
 		var buf strings.Builder
 		io.Copy(&buf, file)
 		slog.Info("addfile NZB content", "content", buf.String())
-		// Extrahiere ID aus: audyn-deezer-{id}@audyn
+		// extract id
 		re := regexp.MustCompile(`audyn-deezer-(\d+)@audyn`)
 		if matches := re.FindStringSubmatch(buf.String()); len(matches) > 1 {
 			albumID = matches[1]
