@@ -12,7 +12,7 @@ type Config struct {
 
 func Load() Config {
 	return Config{
-		DeezerARL:           getEnv("AUDYN_DEEZER_ARL", ""),
+		DeezerARL:           getEnv("DEEZER_ARL", ""),
 		IncompletePath:      getEnv("AUDYN_INCOMPLETE_PATH", "/downloads/incomplete"),
 		CompletePath:        getEnv("AUDYN_COMPLETE_PATH", "/downloads/complete"),
 		CompletePathMapping: getEnv("AUDYN_COMPLETE_PATH_MAPPING", "/downloads/complete"),
