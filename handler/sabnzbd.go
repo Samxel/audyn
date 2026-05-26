@@ -151,7 +151,6 @@ func (h *SabnzbdHandler) Serve(w http.ResponseWriter, r *http.Request) {
 // Lidarr sends: url=http://audyn:5000/download/<albumID>&name=<release>&cat=music
 func (h *SabnzbdHandler) handleAddFile(w http.ResponseWriter, r *http.Request) {
 	r.ParseMultipartForm(10 << 20)
-	slog.Info("addfile form fields", "form", r.MultipartForm)
 
 	name := r.FormValue("nzbname")
 	if name == "" {
@@ -165,7 +164,7 @@ func (h *SabnzbdHandler) handleAddFile(w http.ResponseWriter, r *http.Request) {
 		defer file.Close()
 		var buf strings.Builder
 		io.Copy(&buf, file)
-		slog.Info("addfile NZB content", "content", buf.String())
+
 		// extract id
 		re := regexp.MustCompile(`audyn-deezer-(\d+)@audyn`)
 		if matches := re.FindStringSubmatch(buf.String()); len(matches) > 1 {
@@ -184,7 +183,7 @@ func (h *SabnzbdHandler) handleAddFile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	job := Queue.Add(albumID, name)
-	go RunDownload(job, h.Config)
+	go RunDownloadFunc(job, h.Config)
 
 	slog.Info("addfile: job created", "job_id", job.ID, "album_id", albumID, "name", name)
 

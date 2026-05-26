@@ -4,12 +4,10 @@ import (
 	"audyn/config"
 	"crypto/rand"
 	"encoding/hex"
-	"fmt"
 	"log/slog"
 	"os"
 	"os/exec"
 	"path"
-	"path/filepath"
 	"sync"
 	"time"
 )
@@ -48,6 +46,15 @@ type JobQueue struct {
 var Queue = &JobQueue{
 	jobs: make(map[string]*DownloadJob),
 }
+
+// Reset clears every job from the queue. Only intended for use in tests.
+func (q *JobQueue) Reset() {
+	q.mu.Lock()
+	q.jobs = make(map[string]*DownloadJob)
+	q.mu.Unlock()
+}
+
+var RunDownloadFunc = RunDownload
 
 // newJobID returns a random 16-character hex string suitable as a job/nzo id.
 func newJobID() string {
@@ -130,12 +137,13 @@ func RunDownload(job *DownloadJob, cfg config.Config) {
 		return
 	}
 
-	// rip --folder <dir> --no-db --no-progress id deezer album <id>
+	// rip --folder <dir> --no-db --no-progress url https://www.deezer.com/album/<id>
 	cmd := exec.Command("rip",
 		"--folder", jobFolder,
 		"--no-db",
 		"--no-progress",
-		"id", "deezer", "album", job.AlbumID,
+		"url",
+		"https://www.deezer.com/album/"+job.AlbumID,
 	)
 
 	out, err := cmd.CombinedOutput()
@@ -167,18 +175,4 @@ func RunDownload(job *DownloadJob, cfg config.Config) {
 	job.FilePath = mappedPath
 	job.Status = StatusComplete
 	slog.Info("Download complete", "job_id", job.ID, "path", job.FilePath)
-}
-
-func WriteStreamripConfig(arl string, cfg config.Config) error {
-	configDir := filepath.Join(os.Getenv("HOME"), ".config", "streamrip")
-	os.MkdirAll(configDir, 0755)
-
-	content := fmt.Sprintf(`[deezer]
-arl = "%s"
-
-[downloads]
-folder = "%s"
-`, arl, cfg.CompletePath)
-
-	return os.WriteFile(filepath.Join(configDir, "config.toml"), []byte(content), 0644)
 }
