@@ -1,0 +1,80 @@
+[downloads]
+# Folder where tracks are downloaded to
+folder = ""
+# Put Deezer albums in a 'Deezer' source subfolder
+source_subdirectories = false
+# Put tracks in an album with 2 or more discs into a subfolder named `Disc N`
+disc_subdirectories = true
+# Download tracks concurrently
+concurrency = true
+# Maximum number of tracks to download at once
+max_connections = 6
+# Max number of API requests per source per minute (-1 = no limit)
+requests_per_minute = 60
+# Verify SSL certificates for API connections
+verify_ssl = true
+
+[deezer]
+# 0=MP3_128, 1=MP3_320, 2=FLAC
+# Quality 2 requires a Deezer HiFi subscription
+quality = 2
+# If the target quality is not available, fallback to best available
+lower_quality_if_not_available = true
+# ARL cookie — see https://github.com/nathom/streamrip/wiki/Finding-Your-Deezer-ARL-Cookie
+arl = ""
+# Allow free 320kbps MP3 downloads when no ARL is provided
+use_deezloader = true
+# Warn when falling back to deezloader
+deezloader_warnings = true
+
+[database]
+# Track downloaded IDs to skip re-downloads (disable with --no-db)
+downloads_enabled = true
+downloads_path = ""
+failed_downloads_enabled = true
+failed_downloads_path = ""
+
+[conversion]
+enabled = false
+# FLAC, ALAC, OPUS, MP3, VORBIS, or AAC
+codec = "ALAC"
+# In Hz — 48000 is recommended
+sampling_rate = 48000
+# Only 16 and 24 are available
+bit_depth = 24
+# Only applicable for lossy codecs
+lossy_bitrate = 320
+
+[artwork]
+embed = true
+# thumbnail, small, large, or original
+embed_size = "large"
+embed_max_width = -1
+save_artwork = true
+saved_max_width = -1
+
+[metadata]
+set_playlist_to_album = true
+renumber_playlist_tracks = true
+exclude = []
+
+[filepaths]
+add_singles_to_folder = false
+folder_format = "{albumartist} - {title} ({year}) [{container}] [{bit_depth}B-{sampling_rate}kHz]"
+track_format = "{tracknumber:02}. {artist} - {title}{explicit}"
+restrict_characters = false
+truncate_to = 120
+
+[lastfm]
+# Search last.fm playlists via Deezer
+source = "deezer"
+fallback_source = ""
+
+[cli]
+text_output = true
+progress_bars = true
+max_search_results = 100
+
+[misc]
+version = "2.2.0"
+check_for_updates = true

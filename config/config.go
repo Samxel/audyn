@@ -3,6 +3,7 @@ package config
 import "os"
 
 type Config struct {
+	DeezerARL           string
 	IncompletePath      string
 	CompletePath        string
 	CompletePathMapping string
@@ -11,9 +12,10 @@ type Config struct {
 
 func Load() Config {
 	return Config{
-		IncompletePath:      getEnv("AUDYN_INCOMPLETE_PATH", "./downloads/incomplete"),
-		CompletePath:        getEnv("AUDYN_COMPLETE_PATH", "./downloads/complete"),
-		CompletePathMapping: getEnv("AUDYN_COMPLETE_PATH_MAPPING", "./downloads/complete"),
+		DeezerARL:           getEnv("AUDYN_DEEZER_ARL", ""),
+		IncompletePath:      getEnv("AUDYN_INCOMPLETE_PATH", "/downloads/incomplete"),
+		CompletePath:        getEnv("AUDYN_COMPLETE_PATH", "/downloads/complete"),
+		CompletePathMapping: getEnv("AUDYN_COMPLETE_PATH_MAPPING", "/downloads/complete"),
 		Port:                getEnv("AUDYN_PORT", "5000"),
 	}
 }

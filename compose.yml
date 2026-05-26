@@ -1,0 +1,23 @@
+services:
+  audyn:
+    build: .
+    container_name: audyn
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      # Deezer ARL cookie (https://github.com/nathom/streamrip/wiki/Finding-Your-Deezer-ARL-Cookie)
+      DEEZER_ARL: ""
+      # Quality: 0=MP3_128  1=MP3_320  2=FLAC (requires Deezer HiFi)
+      # DEEZER_QUALITY: "1"
+      AUDYN_PORT: "5000"
+      AUDYN_INCOMPLETE_PATH: /downloads/incomplete
+      AUDYN_COMPLETE_PATH: /downloads/complete
+      # The path Lidarr sees (if SABnzbd and Lidarr use different mount points)
+      AUDYN_COMPLETE_PATH_MAPPING: /downloads/complete
+    volumes:
+      - downloads:/downloads
+
+volumes:
+  downloads:
+  # streamrip_config:
