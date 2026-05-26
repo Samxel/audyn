@@ -2,12 +2,16 @@ package handler
 
 import (
 	"audyn/config"
+	"bufio"
+	"bytes"
 	"crypto/rand"
 	"encoding/hex"
+	"errors"
 	"log/slog"
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -147,7 +151,7 @@ func RunDownload(job *DownloadJob, cfg config.Config) {
 	}
 	jobFolder := path.Join(cfg.CompletePath, folderName)
 
-	if err := os.MkdirAll(jobFolder, 0o755); err != nil {
+	if err := os.MkdirAll(jobFolder, 0o777); err != nil {
 		slog.Error("Failed to create job folder", "job_id", job.ID, "err", err)
 		Queue.mu.Lock()
 		job.Status = StatusFailed
@@ -157,7 +161,6 @@ func RunDownload(job *DownloadJob, cfg config.Config) {
 		return
 	}
 
-	// rip --folder <dir> --no-db --no-progress url https://www.deezer.com/album/<id>
 	cmd := exec.Command("rip",
 		"--folder", jobFolder,
 		"--no-db",
@@ -166,36 +169,133 @@ func RunDownload(job *DownloadJob, cfg config.Config) {
 		"https://www.deezer.com/album/"+job.AlbumID,
 	)
 
-	out, err := cmd.CombinedOutput()
-	slog.Info("streamrip output", "job_id", job.ID, "output", string(out))
+	cmd.Env = append(os.Environ(), "COLUMNS=10000", "NO_COLOR=1")
+	pr, pw, err := os.Pipe()
+	if err != nil {
+		slog.Warn("os.Pipe failed, falling back to CombinedOutput", "err", err)
+		out, cmdErr := cmd.CombinedOutput()
+		slog.Info("streamrip output", "job_id", job.ID, "output", string(out))
+		finalizeDownload(job, cfg, folderName, cmdErr)
+		return
+	}
+	cmd.Stdout = pw
+	cmd.Stderr = pw
+
+	if err := cmd.Start(); err != nil {
+		pw.Close()
+		pr.Close()
+		Queue.mu.Lock()
+		job.Status = StatusFailed
+		job.Error = "start: " + err.Error()
+		job.CompletedAt = time.Now()
+		Queue.mu.Unlock()
+		return
+	}
+
+	pw.Close()
+
+	var outBuf bytes.Buffer
+	createdDirs := map[string]bool{}
+	pathPrefix := cfg.CompletePath + "/"
+	scanner := bufio.NewScanner(pr)
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		outBuf.WriteString(line + "\n")
+		ensureAudioDir(line, pathPrefix, createdDirs)
+	}
+
+	cmdErr := cmd.Wait()
+	slog.Info("streamrip output", "job_id", job.ID, "output", outBuf.String())
+
+	finalizeDownload(job, cfg, folderName, cmdErr)
+}
+
+func ensureAudioDir(line, pathPrefix string, made map[string]bool) {
+	audioExts := []string{".flac", ".mp3", ".opus", ".ogg", ".m4a", ".wav"}
+	for {
+		idx := strings.Index(line, "'"+pathPrefix)
+		if idx < 0 {
+			return
+		}
+		after := line[idx+1:]
+		end := strings.IndexByte(after, '\'')
+		if end < 0 {
+			return
+		}
+		filePath := after[:end]
+		lower := strings.ToLower(filePath)
+		for _, ext := range audioExts {
+			if strings.HasSuffix(lower, ext) {
+				dir := path.Dir(filePath)
+				if !made[dir] {
+					if mkErr := os.MkdirAll(dir, 0o755); mkErr == nil {
+						slog.Info("Pre-created missing audio directory", "dir", dir)
+						made[dir] = true
+					} else {
+						slog.Warn("Failed to pre-create audio directory", "dir", dir, "err", mkErr)
+					}
+				}
+				break
+			}
+		}
+		line = after[end+1:] // advance past this path and keep scanning
+	}
+}
+
+var errAudioFound = errors.New("audio file found")
+
+func hasAudioFiles(root string) bool {
+	audioExts := map[string]bool{
+		".flac": true, ".mp3": true, ".opus": true,
+		".ogg": true, ".m4a": true, ".wav": true,
+	}
+	err := filepath.WalkDir(root, func(_ string, d os.DirEntry, walkErr error) error {
+		if walkErr != nil || d.IsDir() {
+			return nil
+		}
+		if audioExts[strings.ToLower(filepath.Ext(d.Name()))] {
+			return errAudioFound
+		}
+		return nil
+	})
+	return errors.Is(err, errAudioFound)
+}
+
+func finalizeDownload(job *DownloadJob, cfg config.Config, folderName string, cmdErr error) {
+	localPath := path.Join(cfg.CompletePath, folderName)
+	mappedPath := path.Join(cfg.CompletePathMapping, folderName)
 
 	Queue.mu.Lock()
 	defer Queue.mu.Unlock()
 	job.CompletedAt = time.Now()
 
-	if err != nil {
-		slog.Error("Download failed", "job_id", job.ID, "err", err)
+	if cmdErr != nil {
+		slog.Error("Download failed", "job_id", job.ID, "err", cmdErr)
 		job.Status = StatusFailed
-		job.Error = err.Error()
+		job.Error = cmdErr.Error()
 		return
 	}
 
-	mappedPath := path.Join(cfg.CompletePathMapping, folderName)
-	localPath := path.Join(cfg.CompletePath, folderName)
+	if !hasAudioFiles(localPath) {
+		slog.Error("No audio files found after download", "job_id", job.ID, "path", localPath)
+		job.Status = StatusFailed
+		job.Error = "no audio files found after download"
+		return
+	}
 
-	entries, err := os.ReadDir(localPath)
-	if err == nil && len(entries) > 0 {
-		artistDir := path.Join(localPath, entries[0].Name())
-		albumEntries, err := os.ReadDir(artistDir)
-		if err == nil && len(albumEntries) > 0 {
+	if entries, err := os.ReadDir(localPath); err == nil && len(entries) > 0 {
+		first := entries[0].Name()
+		artistDir := path.Join(localPath, first)
+		if albumEntries, err := os.ReadDir(artistDir); err == nil && len(albumEntries) > 0 {
 			for _, e := range albumEntries {
 				if e.IsDir() {
-					mappedPath = path.Join(cfg.CompletePathMapping, job.ID, entries[0].Name(), e.Name())
+					mappedPath = path.Join(cfg.CompletePathMapping, folderName, first, e.Name())
 					break
 				}
 			}
-			if mappedPath == path.Join(cfg.CompletePathMapping, job.ID) {
-				mappedPath = path.Join(cfg.CompletePathMapping, job.ID, entries[0].Name())
+			if mappedPath == path.Join(cfg.CompletePathMapping, folderName) {
+				mappedPath = path.Join(cfg.CompletePathMapping, folderName, first)
 			}
 		}
 	}
