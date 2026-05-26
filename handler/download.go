@@ -30,15 +30,16 @@ const (
 )
 
 type DownloadJob struct {
-	ID          string
-	AlbumID     string
-	Title       string
-	FolderName  string
-	Status      JobStatus
-	FilePath    string
-	Error       string
-	CreatedAt   time.Time
-	CompletedAt time.Time
+	ID             string
+	AlbumID        string
+	Title          string
+	FolderName     string
+	Status         JobStatus
+	FilePath       string
+	Error          string
+	EstimatedBytes int64
+	CreatedAt      time.Time
+	CompletedAt    time.Time
 }
 
 // JobQueue is a thread-safe store for all download jobs.
@@ -74,14 +75,15 @@ func newJobID() string {
 	return hex.EncodeToString(b)
 }
 
-func (q *JobQueue) Add(albumID, title, folderName string) *DownloadJob {
+func (q *JobQueue) Add(albumID, title, folderName string, estimatedBytes int64) *DownloadJob {
 	job := &DownloadJob{
-		ID:         newJobID(),
-		AlbumID:    albumID,
-		Title:      title,
-		FolderName: folderName,
-		Status:     StatusQueued,
-		CreatedAt:  time.Now(),
+		ID:             newJobID(),
+		AlbumID:        albumID,
+		Title:          title,
+		FolderName:     folderName,
+		Status:         StatusQueued,
+		EstimatedBytes: estimatedBytes,
+		CreatedAt:      time.Now(),
 	}
 	q.mu.Lock()
 	q.jobs[job.ID] = job

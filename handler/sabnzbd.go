@@ -135,10 +135,9 @@ func (h *SabnzbdHandler) Serve(w http.ResponseWriter, r *http.Request) {
 				"name":         j.Title,
 				"storage":      j.FilePath,
 				"category":     "music",
-				"size":         "150 MB",
-				"bytes":        int64(157286400),
+				"bytes":        j.EstimatedBytes,
+				"downloaded":   j.EstimatedBytes,
 				"completed":    j.CompletedAt.Unix(),
-				"downloaded":   int64(157286400),
 				"fail_message": failMsg,
 				"action_line":  "",
 				"script_log":   "",
@@ -193,6 +192,7 @@ func (h *SabnzbdHandler) handleAddFile(w http.ResponseWriter, r *http.Request) {
 	// Fall back to generic names if the lookup fails (no ARL needed for metadata).
 	title := name
 	folderName := "deezer-" + albumID
+	var estimatedBytes int64
 	if numID, err := strconv.Atoi(albumID); err == nil {
 		if detail, err := GetAlbumDetail(numID); err == nil && detail.Title != "" {
 			year := ""
@@ -202,13 +202,15 @@ func (h *SabnzbdHandler) handleAddFile(w http.ResponseWriter, r *http.Request) {
 			rawTitle := detail.Artist.Name + " - " + detail.Title + year
 			title = rawTitle
 			folderName = sanitizeForFS(rawTitle)
+			_, _, _, bytesPerTrack := qualityForLevel(h.Config.DeezerQuality)
+			estimatedBytes = int64(detail.NbTracks) * bytesPerTrack
 		}
 	}
 	if title == "" || strings.HasPrefix(title, "deezer-") || strings.HasPrefix(title, "audyn-deezer-") {
 		title = folderName
 	}
 
-	job := Queue.Add(albumID, title, folderName)
+	job := Queue.Add(albumID, title, folderName, estimatedBytes)
 	go RunDownloadFunc(job, h.Config)
 
 	slog.Info("addfile: job created", "job_id", job.ID, "album_id", albumID, "title", title, "folder", folderName)
