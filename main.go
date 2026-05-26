@@ -16,7 +16,7 @@ func main() {
 
 	cfg := config.Load()
 	if cfg.DeezerARL == "" {
-		slog.Warn("AUDYN_DEEZER_ARL not set, downloads will fail")
+		slog.Warn("DEEZER_ARL not set, downloads will fail")
 	} else {
 		handler.WriteStreamripConfig(cfg.DeezerARL, cfg)
 	}
