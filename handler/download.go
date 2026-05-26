@@ -62,6 +62,11 @@ func (q *JobQueue) Reset() {
 
 var RunDownloadFunc = RunDownload
 
+var audioExts = map[string]bool{
+	".flac": true, ".mp3": true, ".opus": true,
+	".ogg": true, ".m4a": true, ".wav": true,
+}
+
 // newJobID returns a random 16-character hex string suitable as a job/nzo id.
 func newJobID() string {
 	b := make([]byte, 8)
@@ -220,7 +225,6 @@ func RunDownload(job *DownloadJob, cfg config.Config) {
 }
 
 func ensureAudioDir(line, pathPrefix string, made map[string]bool) {
-	audioExts := []string{".flac", ".mp3", ".opus", ".ogg", ".m4a", ".wav"}
 	for {
 		idx := strings.Index(line, "'"+pathPrefix)
 		if idx < 0 {
@@ -232,32 +236,24 @@ func ensureAudioDir(line, pathPrefix string, made map[string]bool) {
 			return
 		}
 		filePath := after[:end]
-		lower := strings.ToLower(filePath)
-		for _, ext := range audioExts {
-			if strings.HasSuffix(lower, ext) {
-				dir := path.Dir(filePath)
-				if !made[dir] {
-					if mkErr := os.MkdirAll(dir, 0o755); mkErr == nil {
-						slog.Info("Pre-created missing audio directory", "dir", dir)
-						made[dir] = true
-					} else {
-						slog.Warn("Failed to pre-create audio directory", "dir", dir, "err", mkErr)
-					}
+		if audioExts[strings.ToLower(path.Ext(filePath))] {
+			dir := path.Dir(filePath)
+			if !made[dir] {
+				if mkErr := os.MkdirAll(dir, 0o755); mkErr == nil {
+					slog.Info("Pre-created missing audio directory", "dir", dir)
+					made[dir] = true
+				} else {
+					slog.Warn("Failed to pre-create audio directory", "dir", dir, "err", mkErr)
 				}
-				break
 			}
 		}
-		line = after[end+1:] // advance past this path and keep scanning
+		line = after[end+1:]
 	}
 }
 
 var errAudioFound = errors.New("audio file found")
 
 func hasAudioFiles(root string) bool {
-	audioExts := map[string]bool{
-		".flac": true, ".mp3": true, ".opus": true,
-		".ogg": true, ".m4a": true, ".wav": true,
-	}
 	err := filepath.WalkDir(root, func(_ string, d os.DirEntry, walkErr error) error {
 		if walkErr != nil || d.IsDir() {
 			return nil
@@ -271,10 +267,6 @@ func hasAudioFiles(root string) bool {
 }
 
 func removeNonAudioFiles(root string) {
-	audioExts := map[string]bool{
-		".flac": true, ".mp3": true, ".opus": true,
-		".ogg": true, ".m4a": true, ".wav": true,
-	}
 	_ = filepath.WalkDir(root, func(p string, d os.DirEntry, walkErr error) error {
 		if walkErr != nil || d.IsDir() {
 			return nil
