@@ -270,6 +270,24 @@ func hasAudioFiles(root string) bool {
 	return errors.Is(err, errAudioFound)
 }
 
+func removeNonAudioFiles(root string) {
+	audioExts := map[string]bool{
+		".flac": true, ".mp3": true, ".opus": true,
+		".ogg": true, ".m4a": true, ".wav": true,
+	}
+	_ = filepath.WalkDir(root, func(p string, d os.DirEntry, walkErr error) error {
+		if walkErr != nil || d.IsDir() {
+			return nil
+		}
+		if !audioExts[strings.ToLower(filepath.Ext(d.Name()))] {
+			if err := os.Remove(p); err != nil {
+				slog.Warn("Could not remove non-audio file", "path", p, "err", err)
+			}
+		}
+		return nil
+	})
+}
+
 func finalizeDownload(job *DownloadJob, cfg config.Config, folderName string, cmdErr error) {
 	localPath := path.Join(cfg.CompletePath, folderName)
 	mappedPath := path.Join(cfg.CompletePathMapping, folderName)
@@ -291,6 +309,11 @@ func finalizeDownload(job *DownloadJob, cfg config.Config, folderName string, cm
 		job.Error = "no audio files found after download"
 		return
 	}
+
+	// Remove non-audio files (cover art, log files, …) so that Lidarr's own
+	// post-import empty-folder sweep can remove the directory tree without
+	// needing to call our delete API.
+	removeNonAudioFiles(localPath)
 
 	if entries, err := os.ReadDir(localPath); err == nil && len(entries) > 0 {
 		first := entries[0].Name()
