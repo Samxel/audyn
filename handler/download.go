@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -138,6 +139,12 @@ func (q *JobQueue) Completed() []*DownloadJob {
 	return out
 }
 
+func (q *JobQueue) Remove(id string) {
+	q.mu.Lock()
+	delete(q.jobs, id)
+	q.mu.Unlock()
+}
+
 func RunDownload(job *DownloadJob, cfg config.Config) {
 	Queue.mu.Lock()
 	job.Status = StatusDownloading
@@ -162,6 +169,7 @@ func RunDownload(job *DownloadJob, cfg config.Config) {
 	}
 
 	cmd := exec.Command("rip",
+		"--quality", strconv.Itoa(cfg.DeezerQuality),
 		"--folder", jobFolder,
 		"--no-db",
 		"--no-progress",

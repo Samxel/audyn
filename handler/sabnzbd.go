@@ -6,6 +6,8 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"os"
+	"path"
 	"regexp"
 	"strconv"
 	"strings"
@@ -68,6 +70,10 @@ func (h *SabnzbdHandler) Serve(w http.ResponseWriter, r *http.Request) {
 
 	// ---------------------------------------------------------- active jobs
 	case "queue":
+		if r.URL.Query().Get("name") == "delete" {
+			h.handleDeleteJob(w, r)
+			return
+		}
 		active := Queue.Active()
 		slots := make([]any, 0, len(active))
 		for i, j := range active {
@@ -108,6 +114,10 @@ func (h *SabnzbdHandler) Serve(w http.ResponseWriter, r *http.Request) {
 
 	// ------------------------------------------------------- completed jobs
 	case "history":
+		if r.URL.Query().Get("name") == "delete" {
+			h.handleDeleteJob(w, r)
+			return
+		}
 		completed := Queue.Completed()
 		slots := make([]any, 0, len(completed))
 		for _, j := range completed {
@@ -207,6 +217,31 @@ func (h *SabnzbdHandler) handleAddFile(w http.ResponseWriter, r *http.Request) {
 		"status":  true,
 		"nzo_ids": []string{job.ID},
 	})
+}
+
+func (h *SabnzbdHandler) handleDeleteJob(w http.ResponseWriter, r *http.Request) {
+	id := r.URL.Query().Get("value")
+	if id == "" {
+		json.NewEncoder(w).Encode(map[string]any{"status": false, "error": "missing value"})
+		return
+	}
+
+	if job, ok := Queue.Get(id); ok && r.URL.Query().Get("del_files") == "1" {
+		folderName := job.FolderName
+		if folderName == "" {
+			folderName = job.ID
+		}
+		localFolder := path.Join(h.Config.CompletePath, folderName)
+		if err := os.RemoveAll(localFolder); err != nil {
+			slog.Warn("Could not delete download folder", "job_id", id, "folder", localFolder, "err", err)
+		} else {
+			slog.Info("Deleted download folder", "job_id", id, "folder", localFolder)
+		}
+	}
+
+	Queue.Remove(id)
+	slog.Info("Deleted job from queue", "job_id", id)
+	json.NewEncoder(w).Encode(map[string]any{"status": true})
 }
 
 // extractAlbumID pulls the Deezer album ID out of a download URL.
